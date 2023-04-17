@@ -1,6 +1,6 @@
 open Core.Term
 
-type sym_name
+type sym_name = Common.Path.t * string * Common.Pos.pos option
 val name_of_sym : sym -> sym_name
 
 type 'a index

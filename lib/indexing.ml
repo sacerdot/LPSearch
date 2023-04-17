@@ -127,9 +127,9 @@ module DB = struct
    db := insert !db k v ;
    let vs = search !db k in
    prerr_endline "XXXXXXXXXXXXXXXXXXX" ;
-   Format.printf "Indexing %a\n" Core.Print.term k ;
+   Format.printf "Indexing %a@." Core.Print.term k ;
    List.iter
-    (fun (p,n,pos) -> Format.printf "Equivalent to %a.%s@%a\n" Core.Print.path p n Common.Pos.pp pos)
+    (fun (p,n,pos) -> Format.printf "Equivalent to %a.%s@%a@." Core.Print.path p n Common.Pos.pp pos)
     vs ;
    prerr_endline ("")
  let search k = search !db k

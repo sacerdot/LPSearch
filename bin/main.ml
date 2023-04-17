@@ -1,6 +1,26 @@
 open Timed
 open Cmdliner
 
+let answer_query {Common.Pos.elt=cmd ; _} =
+ match cmd with
+    Parsing.Syntax.P_query {elt=Parsing.Syntax.P_query_infer (pterm,_) ; _} ->
+      let sig_state = Core.Sig_state.dummy in
+      let env = [] in
+      let query = Parsing.Scope.scope_term true sig_state env pterm in
+      Format.printf "Query %a\n" Core.Print.term query ;
+      let vs = LPSearch.Indexing.DB.search query in
+      List.iter
+       (fun (p,n,pos) -> Format.printf "Equivalent to %a.%s@%a\n" Core.Print.path p n Common.Pos.pp pos)
+       vs ;
+      Format.printf "\n"
+  | _ ->
+      prerr_endline "Syntax error"
+
+let search () =
+  Format.printf "Enter query with syntax \"type query;\": @." ;
+  let aststream = Parsing.Parser.Lp.parse stdin in
+  Stream.iter answer_query aststream
+
 let index file =
  let sign = Handle.Compile.PureUpToSign.compile_file file in
  let syms = sign.sign_symbols in
@@ -24,7 +44,8 @@ let index file =
 let index_cmd files =
  Common.Library.set_lib_root (Some (Sys.getcwd ())) ;
  Stdlib.(Handle.Compile.gen_obj := true) ;
- List.iter index files
+ List.iter index files ;
+ search ()
 
 let man_pkg_file =
   let sample_pkg_file =
