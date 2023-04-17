@@ -19,7 +19,7 @@
  (name LPSearch)
  (synopsis "An indexer and search engine for LambdaPi/Dedukti")
  (description "An indexer and search engine for LambdaPi/Dedukti")
- (depends ocaml dune lambdapi)
+ (depends ocaml dune lambdapi cmdliner)
  (tags
   (search index lambdapi dedukti "interactive theorem provers")))
 

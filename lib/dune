@@ -1,2 +1,3 @@
 (library
- (name LPSearch))
+ (name LPSearch)
+ (libraries lambdapi.core))

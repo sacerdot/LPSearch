@@ -1,4 +1,4 @@
 (executable
  (public_name LPSearch)
  (name main)
- (libraries LPSearch))
+ (libraries LPSearch lambdapi.handle cmdliner))
