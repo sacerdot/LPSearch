@@ -1,0 +1,4 @@
+(executable
+ (public_name LPSearch)
+ (name main)
+ (libraries LPSearch))
