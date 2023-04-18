@@ -1,25 +1,33 @@
 open Timed
 open Cmdliner
 
+let find_sym ~prt:_prt ~prv:_prv _sig_state {Common.Pos.elt=(mp,name) ; pos} =
+ Core.Term.create_sym mp Core.Term.Public Core.Term.Defin Core.Term.Sequen false
+  (Common.Pos.make pos name) Core.Term.mk_Type [] 
+
 let answer_query {Common.Pos.elt=cmd ; _} =
  match cmd with
     Parsing.Syntax.P_query {elt=Parsing.Syntax.P_query_infer (pterm,_) ; _} ->
       let sig_state = Core.Sig_state.dummy in
       let env = [] in
-      let query = Parsing.Scope.scope_term true sig_state env pterm in
+      let query = Parsing.Scope.scope_lhs ~find_sym false sig_state env pterm in
       Format.printf "Query %a\n" Core.Print.term query ;
       let vs = LPSearch.Indexing.DB.search query in
       List.iter
-       (fun (p,n,pos) -> Format.printf "Equivalent to %a.%s@%a\n" Core.Print.path p n Common.Pos.pp pos)
+       (fun ((p,n),pos) -> Format.printf "Equivalent to %a.%s@%a\n" Core.Print.path p n Common.Pos.pp pos)
        vs ;
       Format.printf "\n"
   | _ ->
       prerr_endline "Syntax error"
 
-let search () =
+let rec search () =
   Format.printf "Enter query with syntax \"type query;\": @." ;
-  let aststream = Parsing.Parser.Lp.parse stdin in
-  Stream.iter answer_query aststream
+  match input_line stdin with
+     s ->
+      let aststream = Parsing.Parser.Lp.parse_string "LPSearch" s in
+      Stream.iter answer_query aststream ;
+      search ()
+   | exception End_of_file -> ()
 
 let index file =
  let sign = Handle.Compile.PureUpToSign.compile_file file in
@@ -38,7 +46,7 @@ let index file =
   Lplib.Extra.StrMap.iter
    (fun _ sym ->
      LPSearch.Indexing.DB.insert !(sym.Core.Term.sym_type)
-      (LPSearch.Indexing.name_of_sym sym))
+      ((LPSearch.Indexing.name_of_sym sym),sym.sym_pos))
    !syms
 
 let index_cmd files =

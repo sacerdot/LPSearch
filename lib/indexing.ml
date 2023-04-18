@@ -1,7 +1,7 @@
 open Core.Term
 
-type sym_name = Common.Path.t * string * Common.Pos.pos option
-let name_of_sym s = (s.sym_path, s.sym_name, s.sym_pos)
+type sym_name = Common.Path.t * string
+let name_of_sym s = (s.sym_path, s.sym_name)
 
 (* discrimination tree *)
 (* substitution trees would be best *)
@@ -79,6 +79,24 @@ let rec match_rigid r term =
  | _, (Meta _ | Plac _ | Wild | TRef _ | TEnv _) -> assert false
  | _, _ -> raise NoMatch
 
+(* match anything with a flexible term *)
+let rec match_flexible =
+ function
+    IHOLE i -> [i]
+  | IRigid(r,i) ->
+     match r with
+      | IKind
+      | IType
+      | ISymb _ -> [i]
+      | IAppl
+      | IAbst
+      | IProd -> List.concat (List.map match_flexible_index (match_flexible_index i))
+and match_flexible_index =
+ function
+    Leaf _ -> assert false (* ill-typed term *)
+  | Choice nodes ->
+     List.concat (List.map match_flexible nodes)
+
 let rec insert_index index stack v =
  match index,stack with
  | Leaf vs, [] -> Leaf(v::vs)
@@ -112,6 +130,9 @@ let rec search_index index stack =
  | _, _ -> assert false (* ill-typed term *)
 and search_node node term s =
  match node,term with
+ | _, Patt _ ->
+     prerr_endline "FLESSIBILE" ;
+     List.concat (List.map (fun i -> search_index i s) (match_flexible node))
  | IHOLE i, _ -> search_index i s
  | IRigid(r,i), t ->
      match match_rigid r t with
@@ -121,7 +142,7 @@ and search_node node term s =
 let search index term = search_index index [term]
 
 module DB = struct 
- type ident = sym_name
+ type item = sym_name * Common.Pos.pos option
  let db = ref empty
  let insert k v =
    db := insert !db k v ;
@@ -129,7 +150,7 @@ module DB = struct
    prerr_endline "XXXXXXXXXXXXXXXXXXX" ;
    Format.printf "Indexing %a@." Core.Print.term k ;
    List.iter
-    (fun (p,n,pos) -> Format.printf "Equivalent to %a.%s@%a@." Core.Print.path p n Common.Pos.pp pos)
+    (fun ((p,n),pos) -> Format.printf "Equivalent to %a.%s@%a@." Core.Print.path p n Common.Pos.pp pos)
     vs ;
    prerr_endline ("")
  let search k = search !db k
