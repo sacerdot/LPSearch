@@ -3,9 +3,22 @@ open Cmdliner
 
 let db_name = "LPSearch.db"
 
+exception NameUnknown
+
 let find_sym ~prt:_prt ~prv:_prv _sig_state {Common.Pos.elt=(mp,name) ; pos} =
- Core.Term.create_sym mp Core.Term.Public Core.Term.Defin Core.Term.Sequen false
-  (Common.Pos.make pos name) Core.Term.mk_Type [] 
+ let mp =
+  match mp with
+     [] ->
+      (match LPSearch.Indexing.DB.resolve_name name with
+          [((mp,_),_)] -> mp
+        | [] -> raise NameUnknown
+        | ((mp,_),_)::_ ->
+           prerr_endline "OVERLOADED SYMBOL, PICKING FIRST INTERPRETATION";
+           mp)
+   | _::_ -> mp
+ in
+  Core.Term.create_sym mp Core.Term.Public Core.Term.Defin Core.Term.Sequen false
+   (Common.Pos.make pos name) Core.Term.mk_Type [] 
 
 let answer_query {Common.Pos.elt=cmd ; _} =
  match cmd with
