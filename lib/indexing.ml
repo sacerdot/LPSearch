@@ -3,6 +3,8 @@ open Core.Term
 type sym_name = Common.Path.t * string
 let name_of_sym s = (s.sym_path, s.sym_name)
 
+module StrMap = Map.Make(String)
+
 (* discrimination tree *)
 (* substitution trees would be best *)
 
@@ -24,7 +26,9 @@ and rigid =
  | IAbst
  | IProd
 
-let empty = Choice []
+type 'a db = 'a list StrMap.t * 'a index
+
+let empty =  StrMap.empty, Choice []
 
 let term_of_patt (_var, _varname, args) =
  let var = Bindlib.new_var mk_Vari "dummy" in
@@ -119,7 +123,10 @@ and insert_node node term s v =
     IRigid(r,insert_index i (s'@s) v)
  | _, _ -> raise NoMatch
 
-let insert index term v = insert_index index [term] v
+let insert symname_of (namemap,index) term v =
+ let name = symname_of v in
+ let vs = match StrMap.find_opt name namemap with None -> [] | Some l -> l in
+ StrMap.add name (v::vs) namemap, insert_index index [term] v
 
 let rec search_index index stack =
  match index,stack with
@@ -139,7 +146,9 @@ and search_node node term s =
      | s' -> search_index i (s'@s)
      | exception NoMatch -> []
 
-let search index term = search_index index [term]
+let search (_,index) term = search_index index [term]
+let resolve_name (namemap,_) name =
+  match StrMap.find_opt name namemap with None -> [] | Some l -> l
 
 let dump_to ~filename i =
  let ch = open_out_bin filename in
@@ -156,7 +165,7 @@ module DB = struct
  type item = sym_name * Common.Pos.pos option
  let db = ref empty
  let insert k v =
-   db := insert !db k v ;
+   db := insert (fun ((_,name),_) -> name) !db k v(*;
    let vs = search !db k in
    prerr_endline "XXXXXXXXXXXXXXXXXXX" ;
    Format.printf "Indexing %a@." Core.Print.term k ;
@@ -164,7 +173,9 @@ module DB = struct
     (fun ((p,n),pos) -> Format.printf "Equivalent to %a.%s@%a@." Core.Print.path p n Common.Pos.pp pos)
     vs ;
    prerr_endline ("")
+*)
  let search k = search !db k
  let dump_to ~filename = dump_to ~filename !db
  let restore_from ~filename = db := restore_from ~filename
+ let resolve_name name = resolve_name !db name
 end

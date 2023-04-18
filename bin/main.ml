@@ -35,6 +35,13 @@ let search_cmd () =
   LPSearch.Indexing.DB.restore_from ~filename:db_name ;
   search()
 
+let resolve_cmd name =
+  LPSearch.Indexing.DB.restore_from ~filename:db_name ;
+  let vs = LPSearch.Indexing.DB.resolve_name name in
+  List.iter
+   (fun ((p,n),pos) -> Format.printf "Equivalent to %a.%s@%a\n" Core.Print.path p n Common.Pos.pp pos)
+   vs
+
 let index file =
  let sign = Handle.Compile.PureUpToSign.compile_file file in
  let syms = sign.sign_symbols in
@@ -98,6 +105,13 @@ let files : string list Cmdliner.Term.t =
   in
   Arg.(value & (pos_all non_dir_file []) & info [] ~docv:"FILE" ~doc)
 
+let name_as_arg : string Cmdliner.Term.t =
+  let env =
+   let doc = Printf.sprintf "Name of a constant to be resolved." in
+   Cmd.Env.info "NAME_MSG" ~doc in
+  let doc = "Name of constant to be resolved." in
+  Arg.(value & pos 0 string "xxx" & info [] ~env ~docv:"NAME" ~doc)
+
 let index_cmd =
  let doc = "Index the given files." in
  Cmd.v (Cmd.info "index" ~doc ~man:man_pkg_file)
@@ -108,6 +122,11 @@ let search_cmd =
  Cmd.v (Cmd.info "search" ~doc ~man:man_pkg_file)
   Cmdliner.Term.(const search_cmd $ const ())
 
+let resolve_cmd =
+ let doc = "Resolve a name." in
+ Cmd.v (Cmd.info "resolve" ~doc ~man:man_pkg_file)
+  Cmdliner.Term.(const resolve_cmd $ name_as_arg)
+
 
 let version = "0.1"
 
@@ -115,7 +134,7 @@ let _ =
  let t0 = Sys.time () in
  Stdlib.at_exit (Common.Debug.print_time t0);
  Printexc.record_backtrace true;
- let cmds = [ index_cmd ; search_cmd ] in
+ let cmds = [ index_cmd ; search_cmd ; resolve_cmd ] in
  let doc = "Indexer and search for LambdaPi/Dedukti" in
  let sdocs = Manpage.s_common_options in
  let info = Cmd.info "LPSearch" ~version ~doc ~sdocs in
