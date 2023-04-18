@@ -1,6 +1,8 @@
 open Timed
 open Cmdliner
 
+let db_name = "LPSearch.db"
+
 let find_sym ~prt:_prt ~prv:_prv _sig_state {Common.Pos.elt=(mp,name) ; pos} =
  Core.Term.create_sym mp Core.Term.Public Core.Term.Defin Core.Term.Sequen false
   (Common.Pos.make pos name) Core.Term.mk_Type [] 
@@ -29,6 +31,10 @@ let rec search () =
       search ()
    | exception End_of_file -> ()
 
+let search_cmd () =
+  LPSearch.Indexing.DB.restore_from ~filename:db_name ;
+  search()
+
 let index file =
  let sign = Handle.Compile.PureUpToSign.compile_file file in
  let syms = sign.sign_symbols in
@@ -53,7 +59,7 @@ let index_cmd files =
  Common.Library.set_lib_root (Some (Sys.getcwd ())) ;
  Stdlib.(Handle.Compile.gen_obj := true) ;
  List.iter index files ;
- search ()
+ LPSearch.Indexing.DB.dump_to ~filename:db_name
 
 let man_pkg_file =
   let sample_pkg_file =
@@ -97,13 +103,19 @@ let index_cmd =
  Cmd.v (Cmd.info "index" ~doc ~man:man_pkg_file)
   Cmdliner.Term.(const index_cmd $ files)
 
+let search_cmd =
+ let doc = "Run queries against the index." in
+ Cmd.v (Cmd.info "search" ~doc ~man:man_pkg_file)
+  Cmdliner.Term.(const search_cmd $ const ())
+
+
 let version = "0.1"
 
 let _ =
  let t0 = Sys.time () in
  Stdlib.at_exit (Common.Debug.print_time t0);
  Printexc.record_backtrace true;
- let cmds = [ index_cmd ] in
+ let cmds = [ index_cmd ; search_cmd ] in
  let doc = "Indexer and search for LambdaPi/Dedukti" in
  let sdocs = Manpage.s_common_options in
  let info = Cmd.info "LPSearch" ~version ~doc ~sdocs in

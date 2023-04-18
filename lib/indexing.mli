@@ -13,4 +13,6 @@ module DB : sig
  type item = sym_name * Common.Pos.pos option
  val insert : term -> item -> unit
  val search : term -> item list
+ val dump_to : filename:string -> unit
+ val restore_from : filename:string -> unit
 end 

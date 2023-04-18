@@ -141,6 +141,17 @@ and search_node node term s =
 
 let search index term = search_index index [term]
 
+let dump_to ~filename i =
+ let ch = open_out_bin filename in
+ Marshal.to_channel ch i [] ;
+ close_out ch
+
+let restore_from ~filename =
+  let ch = open_in_bin filename in
+  let i = Marshal.from_channel ch in
+  close_in ch ;
+  i
+
 module DB = struct 
  type item = sym_name * Common.Pos.pos option
  let db = ref empty
@@ -154,4 +165,6 @@ module DB = struct
     vs ;
    prerr_endline ("")
  let search k = search !db k
+ let dump_to ~filename = dump_to ~filename !db
+ let restore_from ~filename = db := restore_from ~filename
 end
